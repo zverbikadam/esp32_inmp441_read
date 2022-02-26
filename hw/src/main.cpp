@@ -1,9 +1,13 @@
 #include "main.h"
+#include "credentials.h"
 #include <Arduino.h>
 #include <driver/i2s.h>
+#include <WiFi.h>
+
+WiFiClient espClient;
 
 static uint8_t *wav_file;
-uint8_t buffer32[4096];
+uint32_t buffer32[1024];
 
 void init_wav(uint8_t *wav_file_ptr)
 {
@@ -92,21 +96,24 @@ void read_data(uint8_t *wav_file_ptr)
   uint32_t bytes_read = 0;
   uint32_t samples_written = 0;
   uint16_t samples_read;
-  Serial.println("Recording started!");
+  Serial.println("Recording starting...");
+  delay(1000);
   while (samples_written < WAV_FILE_SAMPLES)
   {
-    i2s_read(I2S_PORT, buffer32, sizeof(buffer32), &bytes_read, portMAX_DELAY);
+    i2s_read(I2S_PORT, (void *)buffer32, sizeof(buffer32), &bytes_read, portMAX_DELAY);
 
     samples_read = bytes_read >> 2;
+    Serial.print("Samples read: ");
+    Serial.println(samples_read);
 
     for (uint32_t i = 0; i < samples_read; i++)
     {
-      uint8_t lsb = buffer32[i * 4 + 2];
-      uint8_t msb = buffer32[i * 4 + 3];
+      uint8_t lsb = (buffer32[i] >> 16) & 0xFF;
+      uint8_t msb = (buffer32[i] >> 24) & 0xFF;
       uint16_t sample = ((((uint16_t)msb) << 8) | ((uint16_t)lsb)) << 4;
 
       // Serial.printf("%ld\n", buffer32[i]);
-      Serial.printf("%ld\n", sample);
+      // Serial.printf("%ld\n", sample);
 
       if (samples_written < WAV_FILE_SAMPLES)
       {
@@ -122,9 +129,55 @@ void read_data(uint8_t *wav_file_ptr)
   }
 }
 
+void upload_data(uint8_t *wav_file_ptr)
+{
+  if (WiFi.isConnected()) // WiFi Router - STA mode
+  // if(WiFi.softAPgetStationNum()>0)                            // WiFi Access point - Soft-AP
+  {
+    while (espClient.connect(SERVER_IP, SERVER_PORT) != 1)
+    {
+      Serial.println("Connection to server failed, retrying...");
+      delay(500);
+    }
+    // Upload data to server
+    Serial.println("Uploading data!");
+    espClient.write(wav_file_ptr, WAV_FILE_SIZE);
+
+    espClient.stop();
+  }
+  else
+  {
+    Serial.println("Wifi not connected");
+  }
+}
+
+void setup_wifi()
+{
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(WIFI_SSID);
+
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
 void setup()
 {
   Serial.begin(115200);
+
+  setup_wifi();
   Serial.print("Start!");
 
   wav_file = (uint8_t *)malloc(WAV_FILE_SIZE * sizeof(uint8_t));
@@ -144,4 +197,5 @@ void setup()
 void loop()
 {
   read_data(wav_file);
+  upload_data(wav_file);
 }

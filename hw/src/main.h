@@ -11,8 +11,8 @@
 #define I2S_READ_LEN (16 * 1024)
 
 // Config DMA
-#define DMA_BUF_COUNT 16 
-#define DMA_BUF_LEN 64
+#define DMA_BUF_COUNT 16    
+#define DMA_BUF_LEN 64      
 
 // Config audio
 #define BITS_PER_SAMPLE 16
@@ -20,7 +20,7 @@
 #define NUM_CHANNELS 1
 
 // Config WAV file
-#define WAV_FILE_SECONDS 1 
+#define WAV_FILE_SECONDS 2
 
 // Const setup
 #define WAV_FILE_SAMPLES (WAV_FILE_SECONDS * SAMPLE_RATE)
@@ -29,4 +29,7 @@
 #define WAV_FILE_DATA_SIZE (WAV_FILE_SAMPLES * WAV_BYTES_PER_SAMPLE)
 #define WAV_FILE_SIZE (WAV_FILE_HEADER_SIZE + WAV_FILE_DATA_SIZE)
 #define FLASH_RECORD_SIZE (NUM_CHANNELS * SAMPLE_RATE * BITS_PER_SAMPLE / 8 * WAV_FILE_SECONDS)
+
+#define SERVER_IP "192.168.0.214"
+#define SERVER_PORT 8082
 #endif
